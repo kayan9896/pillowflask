@@ -3,102 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Process Image</title>
+    <title>Image Processor</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        h1, h2 { color: #333; }
-        img { max-width: 100%; height: auto; margin-bottom: 20px; }
-        form { margin-bottom: 20px; }
-        input[type="submit"] { background-color: #4CAF50; color: white; padding: 10px 15px; border: none; cursor: pointer; margin-right: 10px; }
-        input[type="number"], input[type="range"] { margin-bottom: 10px; }
-        .flash { background-color: #f0f0f0; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: #2b2b2b;
+            color: #e6e6e6;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #1e1e1e;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .image-area {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #333333;
+            overflow: auto;
+        }
+        .options-panel {
+            width: 250px;
+            background-color: #1e1e1e;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        h1, h2 {
+            color: #e6e6e6;
+            margin-top: 0;
+        }
+        img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #4a4a4a;
+            color: #e6e6e6;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #5a5a5a;
+        }
+        input[type="range"], input[type="number"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .flash {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <h1>Process Image</h1>
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="flash">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Uploaded image">
-    
-    <h2>Image Processing Options</h2>
-    
-    <form method="post">
-        <input type="hidden" name="action" value="resize">
-        <label for="scale">Resize (%): </label>
-        <input type="number" name="scale" id="scale" min="1" max="200" value="100" required>
-        <input type="submit" value="Resize">
-    </form>
+    <div class="sidebar">
+        <h1>Image Processor</h1>
+        <button onclick="showOptions('resize')">Resize</button>
+        <button onclick="showOptions('rotate')">Rotate</button>
+        <button onclick="showOptions('invert')">Invert Colors</button>
+        <button onclick="showOptions('blur')">Blur</button>
+        <button onclick="showOptions('sepia')">Sepia</button>
+        <button onclick="showOptions('black_white')">Black & White</button>
+        <button onclick="showOptions('adjust')">Brightness & Contrast</button>
+        <button onclick="showOptions('adjust_color')">Color Adjustment</button>
+        <button onclick="showOptions('edge_detection')">Edge Detection</button>
+    </div>
 
-    <form method="post">
-        <input type="hidden" name="action" value="rotate">
-        <label for="angle">Rotate (degrees): </label>
-        <input type="number" name="angle" id="angle" min="0" max="360" value="0" required>
-        <input type="submit" value="Rotate">
-    </form>
+    <div class="main-content">
+        <div class="image-area">
+            <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Uploaded image">
+        </div>
+    </div>
 
-    <form method="post">
-        <input type="hidden" name="action" value="invert">
-        <input type="submit" value="Invert Colors">
-    </form>
+    <div class="options-panel">
+        <h2>Options</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-    <form method="post">
-        <input type="hidden" name="action" value="blur">
-        <label for="blur_radius">Blur Radius: </label>
-        <input type="number" name="blur_radius" id="blur_radius" min="0" max="10" step="0.1" value="1" required>
-        <input type="submit" value="Apply Blur">
-    </form>
+        <form id="resizeForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="resize">
+            <label for="scale">Resize (%): </label>
+            <input type="number" name="scale" id="scale" min="1" max="200" value="100" required>
+            <button type="submit">Apply Resize</button>
+        </form>
 
-    <form method="post">
-        <input type="hidden" name="action" value="sepia">
-        <input type="submit" value="Apply Sepia">
-    </form>
+        <form id="rotateForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="rotate">
+            <label for="angle">Rotate (degrees): </label>
+            <input type="number" name="angle" id="angle" min="0" max="360" value="0" required>
+            <button type="submit">Apply Rotation</button>
+        </form>
 
-    <form method="post">
-        <input type="hidden" name="action" value="black_white">
-        <input type="submit" value="Convert to Black & White">
-    </form>
+        <form id="invertForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="invert">
+            <button type="submit">Apply Invert Colors</button>
+        </form>
 
-    <form method="post">
-        <input type="hidden" name="action" value="adjust">
-        <label for="brightness">Brightness: </label>
-        <input type="range" name="brightness" id="brightness" min="0" max="2" step="0.1" value="1" required>
-        <br>
-        <label for="contrast">Contrast: </label>
-        <input type="range" name="contrast" id="contrast" min="0" max="2" step="0.1" value="1" required>
-        <br>
-        <input type="submit" value="Adjust Brightness & Contrast">
-    </form>
+        <form id="blurForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="blur">
+            <label for="blur_radius">Blur Radius: </label>
+            <input type="range" name="blur_radius" id="blur_radius" min="0" max="10" step="0.1" value="1" required>
+            <button type="submit">Apply Blur</button>
+        </form>
 
-    <form method="post">
-        <input type="hidden" name="action" value="adjust_color">
-        <label for="hue">Hue: </label>
-        <input type="range" name="hue" id="hue" min="0" max="360" value="0" required>
-        <br>
-        <label for="saturation">Saturation: </label>
-        <input type="range" name="saturation" id="saturation" min="0" max="2" step="0.1" value="1" required>
-        <br>
-        <label for="red">Red: </label>
-        <input type="range" name="red" id="red" min="0" max="2" step="0.1" value="1" required>
-        <br>
-        <label for="green">Green: </label>
-        <input type="range" name="green" id="green" min="0" max="2" step="0.1" value="1" required>
-        <br>
-        <label for="blue">Blue: </label>
-        <input type="range" name="blue" id="blue" min="0" max="2" step="0.1" value="1" required>
-        <br>
-        <input type="submit" value="Adjust Color">
-    </form>
+        <form id="sepiaForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="sepia">
+            <button type="submit">Apply Sepia</button>
+        </form>
 
-    <form method="post">
-        <input type="hidden" name="action" value="edge_detection">
-        <input type="submit" value="Apply Edge Detection">
-    </form>
+        <form id="black_whiteForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="black_white">
+            <button type="submit">Convert to Black & White</button>
+        </form>
 
-    <p><a href="{{ url_for('index') }}">Upload a new image</a></p>
+        <form id="adjustForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="adjust">
+            <label for="brightness">Brightness: </label>
+            <input type="range" name="brightness" id="brightness" min="0" max="2" step="0.1" value="1" required>
+            <label for="contrast">Contrast: </label>
+            <input type="range" name="contrast" id="contrast" min="0" max="2" step="0.1" value="1" required>
+            <button type="submit">Apply Adjustment</button>
+        </form>
+
+        <form id="adjust_colorForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="adjust_color">
+            <label for="hue">Hue: </label>
+            <input type="range" name="hue" id="hue" min="0" max="360" value="0" required>
+            <label for="saturation">Saturation: </label>
+            <input type="range" name="saturation" id="saturation" min="0" max="2" step="0.1" value="1" required>
+            <label for="red">Red: </label>
+            <input type="range" name="red" id="red" min="0" max="2" step="0.1" value="1" required>
+            <label for="green">Green: </label>
+            <input type="range" name="green" id="green" min="0" max="2" step="0.1" value="1" required>
+            <label for="blue">Blue: </label>
+            <input type="range" name="blue" id="blue" min="0" max="2" step="0.1" value="1" required>
+            <button type="submit">Apply Color Adjustment</button>
+        </form>
+
+        <form id="edge_detectionForm" class="hidden" method="post">
+            <input type="hidden" name="action" value="edge_detection">
+            <button type="submit">Apply Edge Detection</button>
+        </form>
+    </div>
+
+    <script>
+        function showOptions(action) {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => form.classList.add('hidden'));
+            document.getElementById(action + 'Form').classList.remove('hidden');
+        }
+    </script>
 </body>
 </html>
