@@ -47,15 +47,17 @@
             <div class="col-8 d-flex flex-column">
                 <!-- Toolbar -->
                 <div class="p-2 bg-dark">
-                    <input type="file" id="imageUpload" accept="image/*" class="d-none">
+                    <form id="uploadForm" method="post" enctype="multipart/form-data" style="display: none;">
+                        <input type="file" id="imageUpload" name="file" accept="image/*">
+                    </form>
                     <button class="btn btn-sm btn-outline-light me-2" onclick="document.getElementById('imageUpload').click()">Upload</button>
-                    <button class="btn btn-sm btn-outline-light me-2" onclick="undo()">Undo</button>
-                    <button class="btn btn-sm btn-outline-light me-2" onclick="redo()">Redo</button>
+                    <button id="undoBtn" class="btn btn-sm btn-outline-light me-2" onclick="undo()" disabled>Undo</button>
+                    <button id="redoBtn" class="btn btn-sm btn-outline-light me-2" onclick="redo()" disabled>Redo</button>
                     <button class="btn btn-sm btn-outline-light" onclick="saveImage()">Save</button>
                 </div>
                 <!-- Image Area -->
                 <div class="flex-grow-1 image-area d-flex justify-content-center align-items-center position-relative">
-                    <img src="" alt="Uploaded image" id="mainImage" class="img-fluid">
+                    <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="Uploaded image" id="mainImage" class="img-fluid">
                     <div class="position-absolute bottom-0 end-0 m-3">
                         <button class="btn btn-sm btn-dark" onclick="zoomIn()">+</button>
                         <button class="btn btn-sm btn-dark" onclick="zoomOut()">-</button>
@@ -78,6 +80,22 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
     
     <script>
+        let undoStack = [];
+        let redoStack = [];
+        const maxStackSize = 20;
+        function updateUndoRedoButtons() {
+    document.getElementById('undoBtn').disabled = undoStack.length <= 1;
+    document.getElementById('redoBtn').disabled = redoStack.length === 0;
+}
+        function saveState() {
+            const img = document.getElementById('mainImage');
+            undoStack.push(img.src);
+            if (undoStack.length > maxStackSize) {
+                undoStack.shift(); // Remove the oldest state if we exceed the max size
+            }
+            redoStack = []; // Clear the redo stack when a new action is performed
+            updateUndoRedoButtons();
+        }
         // Your JavaScript functions here
         function showOptions(action) {
             const forms = document.querySelectorAll('#formContainer form');
@@ -101,23 +119,41 @@
         }
 
         function undo() {
-            // Implement undo functionality
+            if (undoStack.length > 1) { // Keep at least one state in the undo stack
+                const currentState = undoStack.pop();
+                redoStack.push(currentState);
+                const previousState = undoStack[undoStack.length - 1];
+                document.getElementById('mainImage').src = previousState;
+            }
         }
 
         function redo() {
-            // Implement redo functionality
+            if (redoStack.length > 0) {
+                const nextState = redoStack.pop();
+                undoStack.push(nextState);
+                document.getElementById('mainImage').src = nextState;
+            }
         }
 
         // Image upload handling
         document.getElementById('imageUpload').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('mainImage').src = e.target.result;
-                }
-                reader.readAsDataURL(file);
-            }
+        const formData = new FormData(document.getElementById('uploadForm'));
+        fetch('/', { // Adjust this URL to match your backend upload endpoint
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            //document.getElementById('mainImage').src = url;
+            undoStack = [url]; // Initialize undo stack with the original image
+            redoStack = []; // Clear redo stack
+            updateUndoRedoButtons();
+        })
+        .catch(error => console.error('Error:', error));
+    }
         });
 
         const formConfigs = {
@@ -162,6 +198,7 @@
         function generateForm(action, config, isFirst) {
             const form = document.createElement('form');
             form.id = `${action}Form`;
+            form.method='POST'
             if (!isFirst) {
                 form.classList.add('hidden');
             }
@@ -206,6 +243,24 @@
             submitButton.classList.add('btn', 'btn-primary');
             submitButton.textContent = `Apply ${config.title}`;
             form.appendChild(submitButton);
+
+            form.onsubmit = function(e) {
+                e.preventDefault(); // We'll still prevent default, but handle the submission ourselves
+                saveState(); // Save the current state before applying the action
+                
+                const formData = new FormData(form);
+                fetch(window.location.pathname, { // Adjust this URL to match your backend endpoint
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    //document.getElementById('mainImage').src = url;
+                    saveState(); // Save the new state after applying the action
+                })
+                .catch(error => console.error('Error:', error));
+            };
 
             return form;
         }
